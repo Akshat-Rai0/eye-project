@@ -6,9 +6,7 @@ from typing import List, Optional
 class DocumentOut(BaseModel):
     id: UUID
     filename: str
-    relative_path: str
-    content_hash: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: List[str] = []
     caption: Optional[str] = None
 
     class Config:
