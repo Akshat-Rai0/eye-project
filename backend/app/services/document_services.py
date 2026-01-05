@@ -1,74 +1,67 @@
-# AI processing worker that runs in background threads
-# Uses its own DB session to avoid FastAPI request session conflicts
-
+# Document upload and management services
 from pathlib import Path
-from sqlalchemy import select
-from app.db.database import AsyncSessionLocal
+from uuid import uuid4
+from fastapi import UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.document import Document
-import asyncio
+from app.core.config import get_data_base_path
 
 
-def process_document_ai(doc_id: int):
+async def upload_document(file: UploadFile, session: AsyncSession) -> Document:
     """
-    Background worker for AI processing (YOLO + Moondream).
-    Runs in a separate thread, creates its own DB session.
+    Upload a document, save it to disk, and create a database record.
+    Stores relative path in database for portability.
     
     Args:
-        doc_id: The document ID to process
+        file: The uploaded file
+        session: Database session
+        
+    Returns:
+        The created Document record
     """
-    # Run the async work in a new event loop
-    asyncio.run(_process_document_async(doc_id))
+    # Generate unique filename
+    file_ext = Path(file.filename).suffix
+    unique_filename = f"{uuid4()}{file_ext}"
+    
+    # Create relative path (e.g., "inbound/uuid.jpg")
+    relative_path = f"inbound/{unique_filename}"
+    
+    # Get absolute path for saving
+    data_base_path = get_data_base_path()
+    absolute_path = data_base_path / relative_path
+    
+    # Ensure directory exists
+    absolute_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Save file to disk
+    with open(absolute_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    # Create database record with relative path
+    doc = Document(
+        filename=file.filename,
+        relative_path=relative_path,
+        tags=None,
+        description=None
+    )
+    
+    session.add(doc)
+    await session.commit()
+    await session.refresh(doc)
+    
+    return doc
 
 
-async def _process_document_async(doc_id: int):
+def get_document_absolute_path(relative_path: str) -> Path:
     """
-    Internal async function that handles the actual AI processing.
-    Creates its own database session independent of the HTTP request.
+    Convert a relative path from database to absolute path for file access.
+    
+    Args:
+        relative_path: Relative path stored in database (e.g., "inbound/uuid.jpg")
+        
+    Returns:
+        Absolute path to the file
     """
-    # 1. Create a NEW session (not the one from the HTTP request)
-    async with AsyncSessionLocal() as session:
-        # 2. Fetch the document from DB
-        result = await session.execute(
-            select(Document).where(Document.id == doc_id)
-        )
-        doc = result.scalar_one_or_none()
-        
-        if not doc:
-            print(f"Document {doc_id} not found")
-            return
-        
-        print(f"Processing document {doc_id}: {doc.filename}")
-        
-        # 3. Run AI models (placeholder for now)
-        # TODO: Add YOLO detection
-        # detections = run_yolo(doc.path)
-        
-        # TODO: Add Moondream captioning
-        # caption = run_moondream(doc.path)
-        
-        # 4. Update the document with AI results
-        # doc.tags = detections  # Will add this column later
-        # doc.caption = caption  # Will add this column later
-        
-        # 5. Commit changes
-        await session.commit()
-        
-        print(f"Finished processing document {doc_id}")
-
-
-# Placeholder functions for AI models (implement later)
-def run_yolo(image_path: str):
-    """Run YOLO object detection on the image"""
-    # from ultralytics import YOLO
-    # model = YOLO('yolov11n.pt')
-    # results = model(image_path)
-    # return parse_detections(results)
-    pass
-
-
-def run_moondream(image_path: str):
-    """Run Moondream captioning on the image"""
-    # import ollama
-    # response = ollama.chat(model='moondream', messages=[...])
-    # return response['message']['content']
-    pass
+    data_base_path = get_data_base_path()
+    return data_base_path / relative_path
