@@ -19,3 +19,4 @@ class Document(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )
+#. this defines how our data would look in postgres 
