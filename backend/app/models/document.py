@@ -1,22 +1,38 @@
-# Defines the database table schema for stored documents.
+# Defines HTTP endpoints for document-related operations (upload, list, delete).
+from fastapi import APIRouter, UploadFile, Depends, BackgroundTasks
+from sqlalchemy.ext.asyncio import AsyncSession
 
-import uuid
-from sqlalchemy import String, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, DateTime
-from app.db.base import Base
-from app.db.base import Base
+from app.db.database import get_session
+from app.services.document_services import upload_document
+from app.services.ai_service import process_document_ai
 
-class Document(Base):
-    __tablename__ = "documents"
+router = APIRouter()
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    filename: Mapped[str] = mapped_column(String, nullable=False)
-    content_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
-    )
+@router.post("/upload")
+async def upload(
+    file: UploadFile,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Upload a document and trigger AI processing in the background.
+    
+    Flow:
+    1. Upload and save document to DB (fast, returns immediately)
+    2. Queue AI processing as background task (runs after response sent)
+    3. Background task creates its own DB session to avoid conflicts
+    """
+    # Step 1: Upload document synchronously
+    doc = await upload_document(file, session)
+    
+    # Step 2: Queue AI processing (runs AFTER response is sent)
+    # Note: We pass doc.id, not the entire doc object or session
+    background_tasks.add_task(process_document_ai, doc.id)
+    
+    # Step 3: Return immediately to client
+    return {
+        "id": doc.id,
+        "filename": doc.filename,
+        "message": "Upload successful. AI processing started in background."
+    }
 #. this defines how our data would look in postgres 
