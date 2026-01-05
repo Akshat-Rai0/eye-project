@@ -17,4 +17,5 @@ settings = Settings()
 def get_data_base_path() -> Path:
     """Returns the absolute path to the data base directory."""
     backend_dir = Path(__file__).parent.parent.parent  # Go up from core/ to backend/
-    return backend_dir / settings.DATA_BASE_DIR
+    absolute_path = (backend_dir / settings.DATA_BASE_DIR).resolve()
+    return absolute_path

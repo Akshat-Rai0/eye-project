@@ -7,8 +7,9 @@ class DocumentOut(BaseModel):
     id: UUID
     filename: str
     relative_path: str
+    content_hash: Optional[str] = None
     tags: Optional[List[str]] = None
-    description: Optional[str] = None
+    caption: Optional[str] = None
 
     class Config:
         from_attributes = True

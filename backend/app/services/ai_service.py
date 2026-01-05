@@ -1,41 +1,28 @@
 # AI processing worker that runs in background threads
-# Uses its own DB session to avoid FastAPI request session conflicts
+# Uses synchronous database session to avoid asyncio conflicts with CPU-bound ML models
 
 from pathlib import Path
+from uuid import UUID
 from sqlalchemy import select
-from app.db.database import AsyncSessionLocal
+from app.db.database import SessionLocal
 from app.models.document import Document
 from app.services.document_services import get_document_absolute_path
-import asyncio
 
 
-def process_document_ai(doc_id: int):
+def process_document_ai(doc_id: UUID):
     """
     Background worker for AI processing (YOLO + Moondream).
     Runs in a separate thread via FastAPI's BackgroundTasks.
-    This is a pure synchronous function - BackgroundTasks handles threading.
-    Uses asyncio.run() to handle async database operations without event loop conflicts.
+    Uses synchronous database operations to avoid event loop conflicts
+    when running CPU-bound ML models (YOLO).
     
     Args:
         doc_id: The document ID to process
     """
-    # BackgroundTasks runs this in a separate thread, so asyncio.run() is safe
-    # This prevents event loop conflicts when running blocking ML models
-    asyncio.run(_process_document_async(doc_id))
-
-
-async def _process_document_async(doc_id: int):
-    """
-    Internal async function that handles the actual AI processing.
-    Creates its own database session independent of the HTTP request.
-    """
-    # 1. Create a NEW session (not the one from the HTTP request)
-    async with AsyncSessionLocal() as session:
+    # 1. Create a NEW synchronous session (not the async one from HTTP request)
+    with SessionLocal() as session:
         # 2. Fetch the document from DB
-        result = await session.execute(
-            select(Document).where(Document.id == doc_id)
-        )
-        doc = result.scalar_one_or_none()
+        doc = session.query(Document).filter(Document.id == doc_id).first()
         
         if not doc:
             print(f"Document {doc_id} not found")
@@ -46,6 +33,11 @@ async def _process_document_async(doc_id: int):
         # 3. Get absolute path from relative path stored in DB
         image_path = get_document_absolute_path(doc.relative_path)
         
+        # Verify file exists
+        if not image_path.exists():
+            print(f"Error: Image file not found at {image_path}")
+            return
+        
         # 4. Run AI models (placeholder for now)
         # TODO: Add YOLO detection
         # detections = run_yolo(str(image_path))
@@ -55,17 +47,17 @@ async def _process_document_async(doc_id: int):
         
         # 5. Update the document with AI results
         # doc.tags = detections  # Now we have the tags column!
-        # doc.description = caption  # Now we have the description column!
+        # doc.caption = caption  # Now we have the caption column!
         
         # For now, set placeholder values to test the columns work
         # Remove these when you implement the actual AI models
-        if doc.tags is None:
+        if not doc.tags:
             doc.tags = []
-        if doc.description is None:
-            doc.description = ""
+        if doc.caption is None:
+            doc.caption = ""
         
         # 6. Commit changes
-        await session.commit()
+        session.commit()
         
         print(f"Finished processing document {doc_id}")
 
