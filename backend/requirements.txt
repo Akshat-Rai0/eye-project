@@ -1,0 +1,28 @@
+# --- Web & API ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12
+python-dotenv==1.0.1
+
+# --- Database & Vectors ---
+sqlalchemy==2.0.35
+psycopg[binary]
+pgvector==0.3.6
+alembic==1.13.3
+
+# --- Computer Vision & AI ---
+# YOLOv11 and image processing
+ultralytics==8.3.0
+opencv-python-headless  # Headless is lighter for servers/FastAPI
+numpy
+
+# Official SDK for Gemma 3 and Moondream via Ollama
+ollama==0.4.0
+
+# For generating the vectors from text
+sentence-transformers==3.1.1
+
+# --- Utilities ---
+watchdog==5.0.3
+aiofiles==24.1.0
+numpy==1.26.4
