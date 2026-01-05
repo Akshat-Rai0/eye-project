@@ -17,9 +17,7 @@ class Document(Base):
     # Note: nullable=True allows existing records, but new uploads will always have a hash
     content_hash: Mapped[str | None] = mapped_column(String, nullable=True, unique=True, index=True)
     # AI-generated tags from YOLO detection (using JSON for SQLite/PostgreSQL compatibility)
-
-
-    tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=[], server_default="{}")
+    tags: Mapped[list[str]] = mapped_column(JSON, default=[], nullable=False)
+    # AI-generated caption from Moondream
+    caption: Mapped[str | None] = mapped_column(String, nullable=True)
     
-    # NEW: Storage for Moondream description
-    caption: Mapped[str] = mapped_column(String, nullable=True)
