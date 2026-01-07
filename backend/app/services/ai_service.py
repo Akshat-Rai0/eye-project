@@ -82,6 +82,6 @@ def run_moondream(image_path: str) -> str:
     enc_image = moondream_model.encode_image(image)
     
     # Generate caption
-    caption = moondream_model.answer_question(enc_image, "Describe this image in one sentence.", moondream_tokenizer)
+    caption = moondream_model.answer_question(enc_image, "Describe this image in two sentence.", moondream_tokenizer)
     
     return caption
