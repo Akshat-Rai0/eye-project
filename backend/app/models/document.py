@@ -16,6 +16,9 @@ class Document(Base):
     # SHA256 hash of file content for duplicate detection
     # Note: nullable=True allows existing records, but new uploads will always have a hash
     content_hash: Mapped[str | None] = mapped_column(String, nullable=True, unique=True, index=True)
+
+
+    
     # AI-generated tags from YOLO detection (using JSON for SQLite/PostgreSQL compatibility)
     tags: Mapped[list[str]] = mapped_column(JSON, default=[], nullable=False)
     # AI-generated caption from Moondream
