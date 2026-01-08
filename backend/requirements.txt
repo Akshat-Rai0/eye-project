@@ -3,26 +3,30 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.12
 python-dotenv==1.0.1
+pydantic-settings==2.6.1
 
-# --- Database & Vectors ---
+# --- Database ---
 sqlalchemy==2.0.35
-psycopg[binary]
-pgvector==0.3.6
+aiosqlite==0.20.0  # SQLite async driver
+psycopg[binary]  # PostgreSQL driver (optional, for PostgreSQL)
 alembic==1.13.3
 
 # --- Computer Vision & AI ---
-# YOLOv11 and image processing
+# YOLOv11 for object detection
 ultralytics==8.3.0
-opencv-python-headless  # Headless is lighter for servers/FastAPI
-numpy
+opencv-python-headless==4.10.0.84  # Headless is lighter for servers/FastAPI
 
-# Official SDK for Gemma 3 and Moondream via Ollama
-ollama==0.4.0
+# PyTorch and Transformers for Moondream2
+torch>=2.0.0  # PyTorch for Moondream2 (supports MPS on M4 Macs)
+transformers>=4.40.0  # Hugging Face transformers for Moondream2
+Pillow>=10.0.0  # PIL for image processing
 
-# For generating the vectors from text
-sentence-transformers==3.1.1
-
-# --- Utilities ---
-watchdog==5.0.3
-aiofiles==24.1.0
+# --- Core Dependencies ---
 numpy==1.26.4
+
+# --- Optional/Unused (commented out for future use) ---
+# pgvector==0.3.6  # For vector similarity search (if needed later)
+# sentence-transformers==3.1.1  # For text embeddings (if needed later)
+# ollama==0.4.0  # For Ollama API (not currently used, Moondream loaded directly)
+# watchdog==5.0.3  # For file system monitoring (if needed later)
+# aiofiles==24.1.0  # For async file operations (if needed later)
