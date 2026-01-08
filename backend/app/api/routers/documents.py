@@ -19,17 +19,12 @@ async def upload(
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
-    # Step 1: Upload and save to DB
     doc = await upload_document(file, session)
     
-    # Step 2: Queue AI (Pass only the ID)
+    # This stays the same, but now it points to an async function
     background_tasks.add_task(process_document_ai, doc.id)
     
-    return {
-        "id": doc.id,
-        "filename": doc.filename,
-        "message": "Upload successful. AI processing started in background."
-    }
+    return {"id": doc.id, "message": "Processing started..."}
 
 @router.get("/search", response_model=List[DocumentOut])
 async def search_documents(

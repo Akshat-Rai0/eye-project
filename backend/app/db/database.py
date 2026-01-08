@@ -1,10 +1,9 @@
-#Creates the database engine and provides async database sessions.
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from app.core.config import settings
 
-# Async engine and session for FastAPI endpoints
+# --- ASYNC SETUP (For FastAPI Endpoints) ---
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=True,
@@ -20,26 +19,23 @@ async def get_session():
     async with AsyncSessionLocal() as session:
         yield session
 
-# Synchronous engine and session for background workers (AI processing)
-# This avoids asyncio.run() conflicts when running CPU-bound ML models
+# --- SYNC SETUP (For AI Background Worker) ---
 def get_sync_database_url() -> str:
-    """Convert async database URL to sync URL."""
+    """Convert async database URL to sync URL for background threads."""
     url = settings.DATABASE_URL
-    # Remove async drivers
-    if "+asyncpg" in url:
-        url = url.replace("+asyncpg", "")
-    elif "+psycopg" in url:
-        url = url.replace("+psycopg", "")
-    # Ensure postgresql:// (not postgresql+asyncpg://)
-    if url.startswith("postgresql+asyncpg://"):
-        url = url.replace("postgresql+asyncpg://", "postgresql://")
-    elif url.startswith("postgresql+psycopg://"):
-        url = url.replace("postgresql+psycopg://", "postgresql://")
+    
+    # Remove PostgreSQL async drivers
+    url = url.replace("+asyncpg", "").replace("+psycopg", "")
+    
+    # Remove SQLite async driver (Critical for avoiding MissingGreenlet error)
+    if "+aiosqlite" in url:
+        url = url.replace("+aiosqlite", "")
+        
     return url
 
 sync_engine = create_engine(
     get_sync_database_url(),
-    echo=False,
+    echo=False,  # Set to True if you want to see SQL logs for the worker
     pool_pre_ping=True,
 )
 

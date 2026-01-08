@@ -4,9 +4,8 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     DATABASE_URL: str
-    # Base directory for storing uploaded files (relative to project root)
-    # Default: data/images (relative to backend directory)
-    DATA_BASE_DIR: str = "data/images"
+    # Changed from "data/images" to "data" to match your service logic
+    DATA_BASE_DIR: str = "data" 
 
     class Config:
         env_file = ".env"
