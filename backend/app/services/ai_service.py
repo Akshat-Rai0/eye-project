@@ -14,12 +14,13 @@ print("Loading YOLOv11...")
 yolo_model = YOLO('yolo11n.pt')
 
 print("Loading Moondream2 (Optimizing for M4 MPS)...")
+device = "mps" if torch.backends.mps.is_available() else "cpu"
 moondream_model = AutoModelForCausalLM.from_pretrained(
     "vikhyatk/moondream2",
     revision="2025-01-09",
     trust_remote_code=True,
-    device_map={"": "mps"} if torch.backends.mps.is_available() else "cpu"
-).to("mps") 
+    device_map={"": device}
+).to(device) 
 
 moondream_tokenizer = AutoTokenizer.from_pretrained(
     "vikhyatk/moondream2", 
@@ -81,7 +82,12 @@ def process_document_ai(doc_id: UUID):
 
 def run_yolo(image_path: str) -> list[str]:
     """Runs YOLO on the M4 GPU and returns unique object names."""
-    results = yolo_model.predict(source=image_path, device="mps", conf=0.25, verbose=False)
+    results = yolo_model.predict(
+    source=image_path, 
+    device="mps" if torch.backends.mps.is_available() else "cpu",  # Make it conditional
+    conf=0.25, 
+    verbose=False
+)
     
     names = yolo_model.names
     detected_classes = {names[int(box.cls[0])] for result in results for box in result.boxes}

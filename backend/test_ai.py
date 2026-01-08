@@ -14,5 +14,5 @@ def test_local_image(path):
 
 if __name__ == "__main__":
     # Put a path to any real image on your Mac here
-    test_path = "backend/data/images/inbound/test2.jpeg" 
+    test_path = "backend/data/inbound/test2.jpeg" 
     test_local_image(test_path)

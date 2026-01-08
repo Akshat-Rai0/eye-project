@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, cast, String, text
 from typing import List, Optional
 from uuid import UUID
-
+from pathlib import Path
 # Import your models and schemas
 from app.db.database import get_session
 from app.models.document import Document
@@ -19,11 +19,17 @@ async def upload(
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
+
+    ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
     doc = await upload_document(file, session)
-    
-    # This stays the same, but now it points to an async function
     background_tasks.add_task(process_document_ai, doc.id)
-    
     return {"id": doc.id, "message": "Processing started..."}
 
 @router.get("", response_model=List[DocumentOut])
