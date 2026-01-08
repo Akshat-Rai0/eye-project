@@ -15,16 +15,20 @@ from app.services.document_services import get_document_absolute_path
 print("Loading YOLOv11...")
 yolo_model = YOLO('yolo11n.pt')
 
-print("Loading Moondream2 (this may take a moment)...")
-# Note: Use 'mps' for Mac M4 GPU acceleration
+
+# --- GLOBAL MODEL LOADING ---
+print("Loading Moondream2...")
 moondream_model = AutoModelForCausalLM.from_pretrained(
     "vikhyatk/moondream2",
-    revision="2025-01-09", # Use latest stable revision
+    revision="2025-01-09",
     trust_remote_code=True,
     device_map={"": "mps"} if torch.backends.mps.is_available() else "cpu"
-)
-moondream_tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2")
+).to("mps") # Explicitly move to MPS for M4 stability
 
+moondream_tokenizer = AutoTokenizer.from_pretrained(
+    "vikhyatk/moondream2", 
+    trust_remote_code=True # Added for consistency
+)
 
 def process_document_ai(doc_id: UUID):
     """
@@ -74,14 +78,13 @@ def run_yolo(image_path: str) -> list[str]:
     return list(detected_classes)
 
 
+# --- RUN MOONDREAM ---
 def run_moondream(image_path: str) -> str:
-    """Runs Moondream using the global model and returns a caption."""
-    image = Image.open(image_path)
-    
-    # Encode image
-    enc_image = moondream_model.encode_image(image)
-    
-    # Generate caption
-    caption = moondream_model.answer_question(enc_image, "Describe this image in two sentence.", moondream_tokenizer)
-    
+    with Image.open(image_path) as image: # Wrap in 'with' to auto-close file
+        enc_image = moondream_model.encode_image(image)
+        caption = moondream_model.answer_question(
+            enc_image, 
+            "Describe this image in two sentences.", 
+            moondream_tokenizer
+        )
     return caption
