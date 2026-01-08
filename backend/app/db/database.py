@@ -35,7 +35,8 @@ def get_sync_database_url() -> str:
 
 sync_engine = create_engine(
     get_sync_database_url(),
-    echo=False,  # Set to True if you want to see SQL logs for the worker
+    # Crucial for multi-threaded SQLite access
+    connect_args={"timeout": 30, "check_same_thread": False}, 
     pool_pre_ping=True,
 )
 
