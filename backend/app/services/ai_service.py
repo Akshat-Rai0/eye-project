@@ -41,8 +41,23 @@ def process_document_ai(doc_id: UUID):
         
         image_path = get_document_absolute_path(doc.relative_path)
         
+        print(f"🔍 Looking for file at: {image_path}")
+        print(f"   Relative path from DB: {doc.relative_path}")
+        print(f"   File exists: {image_path.exists()}")
+        
         if not image_path.exists():
             print(f"❌ Error: File not found at {image_path}")
+            # Try to find the file in alternative locations
+            from app.core.config import get_data_base_path
+            data_base = get_data_base_path()
+            print(f"   Data base path: {data_base}")
+            print(f"   Data base exists: {data_base.exists()}")
+            if data_base.exists():
+                # List files in inbound directory
+                inbound_dir = data_base / "inbound"
+                if inbound_dir.exists():
+                    files = list(inbound_dir.glob("*"))
+                    print(f"   Files in inbound/: {[f.name for f in files[:5]]}")
             return
 
         try:
