@@ -20,7 +20,9 @@ class Document(Base):
 
     
     # AI-generated tags from YOLO detection (using JSON for SQLite/PostgreSQL compatibility)
-    tags: Mapped[list[str]] = mapped_column(JSON, default=[], nullable=False)
-    # AI-generated caption from Moondream
-    caption: Mapped[str | None] = mapped_column(String, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(JSON, default=[], server_default=text("'[]'"), nullable=False)
     
+    # AI-generated caption from Moondream
+ 
+    caption: Mapped[str | None] = mapped_column(String, nullable=True)
+
