@@ -26,24 +26,22 @@ async def upload(
     
     return {"id": doc.id, "message": "Processing started..."}
 
-@router.get("/{document_id}", response_model=DocumentOut)
-async def get_document(
-    document_id: UUID,
+@router.get("", response_model=List[DocumentOut])
+async def list_documents(
+    limit: int = Query(100, description="Maximum number of documents to return"),
+    offset: int = Query(0, description="Number of documents to skip"),
     session: AsyncSession = Depends(get_session),
 ):
     """
-    Get a document by its ID.
-    Returns the document with all its details including tags and caption.
+    List all documents.
+    Returns a list of all documents with their IDs, filenames, tags, and captions.
+    Useful for finding document IDs.
     """
     result = await session.execute(
-        select(Document).where(Document.id == document_id)
+        select(Document).limit(limit).offset(offset)
     )
-    doc = result.scalar_one_or_none()
-    
-    if not doc:
-        raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found")
-    
-    return doc
+    documents = result.scalars().all()
+    return documents
 
 @router.get("/search", response_model=List[DocumentOut])
 async def search_documents(
@@ -73,3 +71,22 @@ async def search_documents(
     result = await session.execute(query.limit(limit))
     
     return result.scalars().all()
+
+@router.get("/{document_id}", response_model=DocumentOut)
+async def get_document(
+    document_id: UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Get a document by its ID.
+    Returns the document with all its details including tags and caption.
+    """
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    doc = result.scalar_one_or_none()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found")
+    
+    return doc
