@@ -1,13 +1,14 @@
 from fastapi import APIRouter, UploadFile, Depends, BackgroundTasks, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, cast, String, text
+from sqlalchemy import select, or_, cast, String
 from typing import List, Optional
 from uuid import UUID
 from pathlib import Path
+
 # Import your models and schemas
 from app.db.database import get_session
 from app.models.document import Document
-from app.schemas.document_schemas import DocumentOut # Ensure this matches your file name
+from app.schemas.document_schemas import DocumentOut 
 from app.services.document_services import upload_document
 from app.services.ai_service import process_document_ai
 
@@ -19,18 +20,25 @@ async def upload(
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
-
+    """
+    Upload an image, save to disk, and trigger background AI processing.
+    """
     ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
     file_ext = Path(file.filename).suffix.lower()
+    
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400, 
             detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
+    # 1. Save file and create DB record
     doc = await upload_document(file, session)
+    
+    # 2. Trigger AI processing (YOLO + Moondream) in the background
     background_tasks.add_task(process_document_ai, doc.id)
-    return {"id": doc.id, "message": "Processing started..."}
+    
+    return {"id": doc.id, "message": "Upload successful. AI processing started."}
 
 @router.get("", response_model=List[DocumentOut])
 async def list_documents(
@@ -40,42 +48,43 @@ async def list_documents(
 ):
     """
     List all documents.
-    Returns a list of all documents with their IDs, filenames, tags, and captions.
-    Useful for finding document IDs.
     """
     result = await session.execute(
-        select(Document).limit(limit).offset(offset)
+        select(Document).order_by(Document.id.desc()).limit(limit).offset(offset)
     )
-    documents = result.scalars().all()
-    return documents
+    return result.scalars().all()
 
 @router.get("/search", response_model=List[DocumentOut])
 async def search_documents(
-    tag: Optional[str] = Query(None, description="Filter by a specific YOLO tag"),
-    q: Optional[str] = Query(None, description="Search keyword in Moondream caption"),
+    q: str = Query(..., description="The keyword to search for in tags or captions"),
     limit: int = 20,
-    session: AsyncSession = Depends(get_session) # Fixed name to 'session' and used 'get_session'
+    session: AsyncSession = Depends(get_session)
 ):
-    query = select(Document)
+    """
+    Unified Search: Looks for the keyword 'q' in:
+    1. The tags list (YOLO + Moondream keywords)
+    2. The full text caption
+    3. The filename
+    """
+    search_term = q.lower()
+    wildcard_term = f"%{search_term}%"
 
-    # 1. Filter by YOLO Tags (JSON array search)
-    if tag:
-        # For JSON columns, we need to use JSON functions
-        # SQLite: Use json_each to check if tag exists in the JSON array
-        # PostgreSQL: Can use JSON operators, but this works for both
-        # Using a cross-database approach: check if the JSON array contains the exact tag
-        # We search for the tag as a JSON string value (with quotes) to avoid partial matches
-        # This matches patterns like: ["animal", "cat"] or ["cat", "animal"]
-        query = query.filter(
-            cast(Document.tags, String).like(f'%"{tag}"%')
+    # We use 'or_' to match the term in ANY of these places
+    statement = select(Document).where(
+        or_(
+            # Search inside the JSON tags array
+            # cast to String is a safe way to check JSON in SQLite/Postgres
+            cast(Document.tags, String).ilike(wildcard_term),
+            
+            # Search in the long Moondream caption
+            Document.caption.ilike(wildcard_term),
+            
+            # Search in the original filename
+            Document.filename.ilike(wildcard_term)
         )
+    ).limit(limit)
 
-    # 2. Search in Caption (Case-insensitive)
-    if q:
-        query = query.filter(Document.caption.ilike(f"%{q}%"))
-
-    result = await session.execute(query.limit(limit))
-    
+    result = await session.execute(statement)
     return result.scalars().all()
 
 @router.get("/{document_id}", response_model=DocumentOut)
@@ -84,8 +93,7 @@ async def get_document(
     session: AsyncSession = Depends(get_session),
 ):
     """
-    Get a document by its ID.
-    Returns the document with all its details including tags and caption.
+    Get a specific document by ID.
     """
     result = await session.execute(
         select(Document).where(Document.id == document_id)
@@ -93,6 +101,6 @@ async def get_document(
     doc = result.scalar_one_or_none()
     
     if not doc:
-        raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found")
+        raise HTTPException(status_code=404, detail="Document not found")
     
     return doc
