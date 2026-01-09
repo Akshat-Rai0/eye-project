@@ -106,7 +106,7 @@ def run_yolo(image_path: str) -> list[str]:
 
 def extract_ai_keywords(enc_image) -> list[str]:
     """Uses Moondream to extract specific, high-accuracy keywords."""
-    question = "List the 3 to 5 most important objects in this image as a comma separated list of single words."
+    question = "List the 3 most important objects in this image as a comma separated list of single words."
     
     answer = moondream_model.answer_question(
         enc_image, 
