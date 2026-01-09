@@ -23,6 +23,7 @@ moondream_model = AutoModelForCausalLM.from_pretrained(
     device_map={"": device}
 ).to(device)
 
+#s
 moondream_tokenizer = AutoTokenizer.from_pretrained(
     "vikhyatk/moondream2", 
     trust_remote_code=True
