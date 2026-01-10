@@ -21,6 +21,13 @@ torch>=2.0.0  # PyTorch for Moondream2 (supports MPS on M4 Macs)
 transformers>=4.40.0  # Hugging Face transformers for Moondream2
 Pillow>=10.0.0  # PIL for image processing
 
+# CLIP for semantic embeddings
+open-clip-torch==2.24.0  # OpenCLIP for image embeddings
+
+# Dimensionality reduction for 2D visualization
+umap-learn==0.5.5  # UMAP for reducing 512D to 2D
+scikit-learn==1.4.0  # For additional ML utilities
+
 # --- Core Dependencies ---
 numpy==1.26.4
 
