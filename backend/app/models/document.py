@@ -25,4 +25,5 @@ class Document(Base):
     # AI-generated caption from Moondream
  
     caption: Mapped[str | None] = mapped_column(String, nullable=True)
-
+    # CLIP Embedding 
+    embedding = Column(JSON, nullable=True)
