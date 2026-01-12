@@ -4,23 +4,36 @@ from uuid import UUID
 from PIL import Image
 from ultralytics import YOLO
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import open_clip
+import gc
 
 from app.db.database import SessionLocal
 from app.models.document import Document
 from app.services.document_services import get_document_absolute_path
 
 # --- GLOBAL MODEL LOADING (Runs once on startup) ---
-print("Loading YOLOv11m...")
-yolo_model = YOLO('yolo11m.pt')
+# Check MPS availability
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+print(f"🔧 Using device: {device}")
+
+# Set memory optimization flags
+if device == "mps":
+    # Limit MPS memory allocation
+    torch.mps.set_per_process_memory_fraction(.95)  # Use max 95% of available memory
+    print("✅ MPS memory limited to 95%")
+
+print("Loading YOLOv11n (lightweight)...")
+yolo_model = YOLO('yolo11n.pt')
 
 print("Loading Moondream2 (Optimizing for M4 MPS)...")
-device = "mps" if torch.backends.mps.is_available() else "cpu"
 
 moondream_model = AutoModelForCausalLM.from_pretrained(
     "vikhyatk/moondream2",
     revision="2025-01-09",
     trust_remote_code=True,
-    device_map={"": device}
+    torch_dtype=torch.float16 if device == "mps" else torch.float32,  # Use half precision on MPS
+    device_map={"": device},
+    low_cpu_mem_usage=True  # Reduce RAM usage during loading
 ).to(device)
 
 #s
@@ -28,6 +41,17 @@ moondream_tokenizer = AutoTokenizer.from_pretrained(
     "vikhyatk/moondream2", 
     trust_remote_code=True
 )
+
+print("Loading CLIP model for embeddings...")
+clip_model, _, clip_preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s34b_b79k')
+clip_model = clip_model.to(device)
+if device == "mps":
+    clip_model = clip_model.half()  # Use FP16 for memory efficiency
+clip_model.eval()
+
+print(f"✅ All models loaded on {device}")
+if device == "mps":
+    print("🚀 MPS acceleration enabled for M4")
 
 def process_document_ai(doc_id: UUID):
     """
@@ -71,13 +95,17 @@ def process_document_ai(doc_id: UUID):
                 # Extract AI keywords (solves the giraffe/deer/turkey issues)
                 ai_keywords = extract_ai_keywords(enc_image)
 
-                # 4. Merge results
+                # 4. Generate CLIP embedding for semantic similarity
+                embedding = generate_clip_embedding(img_rgb)
+
+                # 5. Merge results
                 # Using a set removes duplicates between YOLO and Moondream
                 unique_tags = list(set(yolo_tags + ai_keywords))
                 
                 # Update DB record
                 doc.tags = unique_tags
                 doc.caption = caption
+                doc.embedding = embedding
 
             session.commit()
             print(f"✅ Successfully processed {doc.filename}")
@@ -88,9 +116,10 @@ def process_document_ai(doc_id: UUID):
             print(f"❌ AI Processing failed for {doc.filename}: {str(e)}")
         
         finally:
-            # Clear M4 GPU cache to prevent memory leaks
+            # Aggressive memory cleanup
             if torch.backends.mps.is_available():
                 torch.mps.empty_cache()
+            gc.collect()  # Force Python garbage collection
 
 def run_yolo(image_path: str) -> list[str]:
     """Runs YOLOv11m on the M4 GPU."""
@@ -118,3 +147,21 @@ def extract_ai_keywords(enc_image) -> list[str]:
     # Clean the response: lowercase, remove periods, split by comma
     raw_tags = answer.lower().replace(".", "").split(",")
     return [t.strip() for t in raw_tags if t.strip()]
+
+def generate_clip_embedding(image: Image.Image) -> list[float]:
+    """Generate a 512-dimensional CLIP embedding for semantic similarity."""
+    with torch.no_grad():
+        # Preprocess and encode image
+        image_tensor = clip_preprocess(image).unsqueeze(0).to(device)
+        
+        # Use FP16 if on MPS
+        if device == "mps":
+            image_tensor = image_tensor.half()
+        
+        embedding = clip_model.encode_image(image_tensor)
+        
+        # Normalize the embedding (important for cosine similarity)
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+        
+        # Convert to list of floats for JSON storage
+        return embedding.cpu().float().numpy().flatten().tolist()

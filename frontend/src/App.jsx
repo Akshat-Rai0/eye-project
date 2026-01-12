@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { getDocuments, searchDocuments, uploadDocument } from './api';
+import Constellation from './components/Constellation.jsx';
 
 const API_BASE = 'http://localhost:8000';
 
-function App() {
+function Gallery() {
   const [documents, setDocuments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -85,7 +87,7 @@ function App() {
       {/* Header */}
       <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-slate-900/70 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -93,7 +95,7 @@ function App() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">EYE</h1>
-          </div>
+          </Link>
 
           <div className="flex-1 max-w-md mx-8">
             <div className="relative group">
@@ -110,7 +112,17 @@ function App() {
             </div>
           </div>
 
-          <label className="cursor-pointer group">
+          <div className="flex items-center gap-3">
+            <Link 
+              to="/constellation"
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl font-medium transition-all border border-slate-700 hover:border-slate-600"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              <span>Constellation</span>
+            </Link>
+            <label className="cursor-pointer group">
             <input type="file" className="hidden" onChange={onFileChange} accept="image/*" />
             <div className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
               {isUploading ? (
@@ -125,7 +137,8 @@ function App() {
               )}
               <span>{isUploading ? 'Uploading...' : 'Upload Image'}</span>
             </div>
-          </label>
+            </label>
+          </div>
         </div>
       </header>
 
@@ -228,6 +241,17 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Gallery />} />
+        <Route path="/constellation" element={<Constellation />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
