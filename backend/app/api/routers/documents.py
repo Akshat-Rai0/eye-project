@@ -4,8 +4,6 @@ from sqlalchemy import select, or_, cast, String
 from typing import List, Optional
 from uuid import UUID
 from pathlib import Path
-import numpy as np
-from umap import UMAP
 
 # Import your models and schemas
 from app.db.database import get_session
@@ -13,6 +11,7 @@ from app.models.document import Document
 from app.schemas.document_schemas import DocumentOut 
 from app.services.document_services import upload_document
 from app.services.ai_service import process_document_ai
+from app.services.graph_service import calculate_2d_projection
 
 router = APIRouter()
 
@@ -89,6 +88,50 @@ async def search_documents(
     result = await session.execute(statement)
     return result.scalars().all()
 
+@router.get("/graph")
+async def get_image_graph(session: AsyncSession = Depends(get_session)):
+    """
+    Generate a force-directed graph of images based on their embeddings.
+    Returns nodes (images) and links (connections between similar images).
+    """
+    # 1. Fetch all documents with embeddings
+    result = await session.execute(
+        select(Document).where(Document.embedding != None)
+    )
+    docs = result.scalars().all()
+    
+    if not docs:
+        return {"nodes": [], "links": []}
+
+    # 2. Project embeddings to 2D coordinates
+    embeddings = [d.embedding for d in docs]
+    coords = calculate_2d_projection(embeddings)
+
+    # 3. Build Nodes
+    nodes = []
+    for i, doc in enumerate(docs):
+        nodes.append({
+            "id": str(doc.id),
+            "x": coords[i][0],
+            "y": coords[i][1],
+            "img": f"http://localhost:8000/data/{doc.relative_path}",
+            "caption": doc.caption,
+            "tags": doc.tags
+        })
+
+    # 4. Build Links (Connect images if they share 2+ tags)
+    links = []
+    for i in range(len(nodes)):
+        for j in range(i + 1, len(nodes)):
+            shared = set(nodes[i]["tags"]) & set(nodes[j]["tags"])
+            if len(shared) >= 2:
+                links.append({
+                    "source": nodes[i]["id"], 
+                    "target": nodes[j]["id"]
+                })
+
+    return {"nodes": nodes, "links": links}
+
 @router.get("/{document_id}", response_model=DocumentOut)
 async def get_document(
     document_id: UUID,
@@ -106,56 +149,3 @@ async def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
     
     return doc
-
-@router.get("/graph")
-async def get_image_graph(session: AsyncSession = Depends(get_session)):
-    """
-    Returns graph data (nodes + links) for constellation visualization.
-    Nodes contain 2D coordinates from UMAP projection of CLIP embeddings.
-    """
-    # 1. Fetch all documents with embeddings
-    result = await session.execute(select(Document).where(Document.embedding.is_not(None)))
-    docs = result.scalars().all()
-    
-    if not docs or len(docs) < 2:
-        return {"nodes": [], "links": []}
-
-    # 2. Project to 2D using UMAP
-    embeddings = np.array([d.embedding for d in docs])
-    
-    # Use UMAP to reduce from 512D to 2D
-    reducer = UMAP(
-        n_components=2,
-        n_neighbors=min(15, len(docs) - 1),
-        min_dist=0.1,
-        metric='cosine',
-        random_state=42
-    )
-    coords = reducer.fit_transform(embeddings)
-    
-    # Scale coordinates for better visualization (scale to ~1000 units)
-    coords = coords * 500
-
-    # 3. Build Nodes
-    nodes = []
-    for i, doc in enumerate(docs):
-        nodes.append({
-            "id": str(doc.id),
-            "x": float(coords[i][0]),
-            "y": float(coords[i][1]),
-            "img": f"http://localhost:8000/data/{doc.relative_path}",
-            "caption": doc.caption or "",
-            "tags": doc.tags or []
-        })
-
-    # 4. Build Links (Connect images if they share 2+ tags)
-    links = []
-    for i in range(len(nodes)):
-        for j in range(i + 1, len(nodes)):
-            tags_i = set(nodes[i]["tags"]) if nodes[i]["tags"] else set()
-            tags_j = set(nodes[j]["tags"]) if nodes[j]["tags"] else set()
-            shared = tags_i & tags_j
-            if len(shared) >= 2:
-                links.append({"source": nodes[i]["id"], "target": nodes[j]["id"]})
-
-    return {"nodes": nodes, "links": links}

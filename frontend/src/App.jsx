@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { getDocuments, searchDocuments, uploadDocument } from './api';
-import Constellation from './components/Constellation.jsx';
+import Constellation from './components/Constellation';
 
 const API_BASE = 'http://localhost:8000';
 
-function Gallery() {
+function App() {
   const [documents, setDocuments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'constellation'
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -58,7 +58,7 @@ function Gallery() {
         } else {
           handleSearch(searchQuery);
         }
-      }, 3000); // Poll every 3 seconds
+      }, 3000);
 
       return () => clearInterval(pollTimer);
     }
@@ -71,7 +71,6 @@ function Gallery() {
     try {
       setIsUploading(true);
       await uploadDocument(file);
-      // Just fetch once to show the placeholder card, polling will do the rest
       fetchDocuments();
     } catch (error) {
       alert('Upload failed: ' + (error.response?.data?.detail || error.message));
@@ -87,7 +86,7 @@ function Gallery() {
       {/* Header */}
       <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-slate-900/70 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -95,7 +94,7 @@ function Gallery() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">EYE</h1>
-          </Link>
+          </div>
 
           <div className="flex-1 max-w-md mx-8">
             <div className="relative group">
@@ -113,81 +112,100 @@ function Gallery() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link 
-              to="/constellation"
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl font-medium transition-all border border-slate-700 hover:border-slate-600"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              <span>Constellation</span>
-            </Link>
-            <label className="cursor-pointer group">
-            <input type="file" className="hidden" onChange={onFileChange} accept="image/*" />
-            <div className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
-              {isUploading ? (
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-              )}
-              <span>{isUploading ? 'Uploading...' : 'Upload Image'}</span>
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('constellation')}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  viewMode === 'constellation'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Graph
+              </button>
             </div>
+
+            <label className="cursor-pointer group">
+              <input type="file" className="hidden" onChange={onFileChange} accept="image/*" />
+              <div className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
+                {isUploading ? (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                )}
+                <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
+              </div>
             </label>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        {loading && documents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 opacity-50">
-            <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p>Loading your visual memory...</p>
-          </div>
-        ) : documents.length === 0 ? (
-          <div className="text-center py-32 bg-slate-900/40 rounded-3xl border border-dashed border-slate-800">
-            <p className="text-slate-500 text-lg">No images found. Try uploading one!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="group relative bg-slate-900/50 rounded-2xl overflow-hidden border border-slate-800 hover:border-indigo-500/50 transition-all hover:-translate-y-1 cursor-pointer"
-                onClick={() => setSelectedDoc(doc)}
-              >
-                <div className="aspect-square overflow-hidden bg-slate-950">
-                  <img
-                    src={getImageUrl(doc.relative_path)}
-                    alt={doc.filename}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="p-4 bg-gradient-to-t from-slate-950/80 to-transparent">
-                  <p className="text-sm font-medium truncate text-slate-300">{doc.filename}</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {doc.tags.slice(0, 3).map((tag, i) => (
-                      <span key={i} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                        {tag}
-                      </span>
-                    ))}
-                    {doc.tags.length > 3 && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-500">
-                        +{doc.tags.length - 3}
-                      </span>
-                    )}
+      {viewMode === 'constellation' ? (
+        <Constellation />
+      ) : (
+        <main className="max-w-7xl mx-auto px-6 py-10">
+          {loading && documents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-32 opacity-50">
+              <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <p>Loading your visual memory...</p>
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="text-center py-32 bg-slate-900/40 rounded-3xl border border-dashed border-slate-800">
+              <p className="text-slate-500 text-lg">No images found. Try uploading one!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="group relative bg-slate-900/50 rounded-2xl overflow-hidden border border-slate-800 hover:border-indigo-500/50 transition-all hover:-translate-y-1 cursor-pointer"
+                  onClick={() => setSelectedDoc(doc)}
+                >
+                  <div className="aspect-square overflow-hidden bg-slate-950">
+                    <img
+                      src={getImageUrl(doc.relative_path)}
+                      alt={doc.filename}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-4 bg-gradient-to-t from-slate-950/80 to-transparent">
+                    <p className="text-sm font-medium truncate text-slate-300">{doc.filename}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {doc.tags.slice(0, 3).map((tag, i) => (
+                        <span key={i} className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                          {tag}
+                        </span>
+                      ))}
+                      {doc.tags.length > 3 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-500">
+                          +{doc.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
+              ))}
+            </div>
+          )}
+        </main>
+      )}
 
       {/* Detail Modal */}
       {selectedDoc && (
@@ -241,17 +259,6 @@ function Gallery() {
         </div>
       )}
     </div>
-  );
-}
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Gallery />} />
-        <Route path="/constellation" element={<Constellation />} />
-      </Routes>
-    </BrowserRouter>
   );
 }
 

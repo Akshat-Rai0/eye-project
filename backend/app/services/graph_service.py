@@ -13,12 +13,12 @@ def calculate_2d_projection(embeddings):
     
     # Adjust n_neighbors to not exceed the number of samples
     # UMAP usually likes n_neighbors < n_samples
-    n_neighbors = min(20, n_samples - 1)
+    n_neighbors = min(15, n_samples - 1)
     if n_neighbors < 2: n_neighbors = 2
 
     reducer = UMAP(
         n_neighbors=n_neighbors, 
-        min_dist=0.15, 
+        min_dist=0.1, 
         n_components=2, 
         
     )
@@ -32,6 +32,6 @@ def calculate_2d_projection(embeddings):
     # Avoid division by zero if all points are identical
     rng[rng == 0] = 1 
     
-    normalized = (projection - p_min) / rng * 10000
+    normalized = (projection - p_min) / rng * 1000
     
     return normalized.tolist()
