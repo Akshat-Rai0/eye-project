@@ -1,29 +1,27 @@
-# Defines the SQLAlchemy Document model for database storage
-from sqlalchemy import String, JSON , text
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID
-from uuid import uuid4
-from app.db.base import Base
+from datetime import datetime
+from typing import List, Optional
+from uuid import uuid4, UUID
 
+from sqlalchemy import String, JSON, text, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+from app.db.base import Base
 
 class Document(Base):
     __tablename__ = "documents"
     
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     filename: Mapped[str] = mapped_column(String, nullable=False)
-    # Store relative path (e.g., "inbound/hash.jpg") instead of absolute path
     relative_path: Mapped[str] = mapped_column(String, nullable=False)
-    # SHA256 hash of file content for duplicate detection
-    # Note: nullable=True allows existing records, but new uploads will always have a hash
-    content_hash: Mapped[str | None] = mapped_column(String, nullable=True, unique=True, index=True)
+    content_hash: Mapped[Optional[str]] = mapped_column(String, unique=True, index=True)
 
+    # AI Metadata
+    tags: Mapped[List[str]] = mapped_column(JSON, default=list, server_default=text("'[]'"))
+    caption: Mapped[Optional[str]] = mapped_column(String)
+    
+    # Embedding: Explicitly typed as JSON for now
+    embedding: Mapped[Optional[List[float]]] = mapped_column(JSON)
 
-    
-    # AI-generated tags from YOLO detection (using JSON for SQLite/PostgreSQL compatibility)
-    tags: Mapped[list[str]] = mapped_column(JSON, default=[], server_default=text("'[]'"), nullable=False)
-    
-    # AI-generated caption from Moondream
- 
-    caption: Mapped[str | None] = mapped_column(String, nullable=True)
-    # CLIP Embedding 
-    embedding = Column(JSON, nullable=True)
+    # Audit Timestamps (Highly recommended for any DB table)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

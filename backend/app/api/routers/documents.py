@@ -104,3 +104,37 @@ async def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
     
     return doc
+@router.get("/graph")
+async def get_image_graph(session: AsyncSession = Depends(get_session)):
+    # 1. Fetch all documents with embeddings
+    result = await session.execute(select(Document).where(Document.embedding != None))
+    docs = result.scalars().all()
+    
+    if not docs:
+        return {"nodes": [], "links": []}
+
+    # 2. Project to 2D
+    embeddings = [d.embedding for d in docs]
+    coords = calculate_2d_projection(embeddings)
+
+    # 3. Build Nodes
+    nodes = []
+    for i, doc in enumerate(docs):
+        nodes.append({
+            "id": str(doc.id),
+            "x": coords[i][0],
+            "y": coords[i][1],
+            "img": f"/api/files/{doc.relative_path}", # Image URL
+            "caption": doc.caption,
+            "tags": doc.tags
+        })
+
+    # 4. Build Links (Connect images if they share 2+ tags)
+    links = []
+    for i in range(len(nodes)):
+        for j in range(i + 1, len(nodes)):
+            shared = set(nodes[i]["tags"]) & set(nodes[j]["tags"])
+            if len(shared) >= 2:
+                links.append({"source": nodes[i]["id"], "target": nodes[j]["id"]})
+
+    return {"nodes": nodes, "links": links}
