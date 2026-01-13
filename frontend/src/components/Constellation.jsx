@@ -55,19 +55,30 @@ export default function Constellation() {
         <div className="absolute top-6 right-6 z-20 w-80 bg-black border border-white/20 animate-in fade-in duration-300">
           <button onClick={() => setSelectedNode(null)} className="absolute top-2 right-2 z-10 text-white/40 hover:text-white p-2">✕</button>
           <div className="p-4">
-            <div className="aspect-square bg-white shadow-2xl mb-4 border-2 border-white overflow-hidden">
-              <img src={selectedNode.img} alt="Node" className="w-full h-full object-contain grayscale" />
+            <div className="aspect-square bg-white shadow-2xl mb-4 border-2 border-white overflow-hidden group/preview">
+              <img
+                src={selectedNode.img}
+                alt="Node"
+                className="w-full h-full object-contain grayscale group-hover/preview:grayscale-0 transition-all duration-500 cursor-crosshair"
+              />
             </div>
             <p className="text-white text-[11px] font-bold uppercase tracking-tight leading-relaxed mb-4 italic">
               "{selectedNode.caption}"
             </p>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 mb-6">
               {selectedNode.tags?.map((tag, i) => (
                 <span key={i} className="text-[9px] px-1.5 py-0.5 bg-white text-black font-black uppercase">
                   {tag}
                 </span>
               ))}
             </div>
+
+            <button
+              onClick={() => setSelectedNode(null)}
+              className="w-full py-2 bg-white text-black text-[10px] font-black uppercase tracking-widest hover:invert transition-all"
+            >
+              HIDE PREVIEW
+            </button>
           </div>
         </div>
       )}

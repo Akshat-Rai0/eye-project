@@ -188,37 +188,46 @@ function App() {
               </svg>
             </button>
 
-            <div className="md:w-2/3 bg-black flex items-center justify-center p-4">
+            <div className="md:w-2/3 bg-black flex items-center justify-center p-4 group/preview">
               <img
                 src={getImageUrl(selectedDoc.relative_path)}
                 alt={selectedDoc.filename}
-                className="max-w-full max-h-full object-contain shadow-2xl"
+                className="max-w-full max-h-full object-contain shadow-2xl grayscale group-hover/preview:grayscale-0 transition-all duration-700"
               />
             </div>
 
-            <div className="md:w-1/3 p-8 border-l border-white/10 overflow-y-auto bg-black">
-              <div className="mb-8">
-                <h2 className="text-xl font-black uppercase tracking-tighter mb-1">{selectedDoc.filename}</h2>
-                <div className="h-1 w-12 bg-white mt-2" />
-              </div>
-
-              <div className="mb-8 p-6 bg-white/5 border border-white/5">
-                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Transcription</h3>
-                <p className="text-white text-sm leading-relaxed font-medium lowercase">
-                  {selectedDoc.caption || 'PENDING...'}
-                </p>
-              </div>
-
+            <div className="md:w-1/3 p-8 border-l border-white/10 overflow-y-auto bg-black flex flex-col justify-between">
               <div>
-                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDoc.tags.map((tag, i) => (
-                    <span key={i} className="px-3 py-1.5 bg-white text-black text-[10px] font-black uppercase tracking-widest">
-                      {tag}
-                    </span>
-                  ))}
+                <div className="mb-8">
+                  <h2 className="text-xl font-black uppercase tracking-tighter mb-1">{selectedDoc.filename}</h2>
+                  <div className="h-1 w-12 bg-white mt-2" />
+                </div>
+
+                <div className="mb-8 p-6 bg-white/5 border border-white/5">
+                  <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Transcription</h3>
+                  <p className="text-white text-sm leading-relaxed font-medium lowercase">
+                    {selectedDoc.caption || 'PENDING...'}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDoc.tags.map((tag, i) => (
+                      <span key={i} className="px-3 py-1.5 bg-white text-black text-[10px] font-black uppercase tracking-widest">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
+
+              <button
+                onClick={() => setSelectedDoc(null)}
+                className="mt-8 w-full py-4 bg-white text-black text-[10px] font-black uppercase tracking-[0.3em] hover:invert transition-all"
+              >
+                HIDE PREVIEW
+              </button>
             </div>
           </div>
         </div>
