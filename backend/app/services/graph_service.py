@@ -20,7 +20,7 @@ def calculate_2d_projection(embeddings):
         n_neighbors=n_neighbors, 
         min_dist=0.1, 
         n_components=2, 
-        
+        random_state=42
     )
     
     projection = reducer.fit_transform(embeddings)
