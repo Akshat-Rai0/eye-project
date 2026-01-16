@@ -9,10 +9,9 @@ from pathlib import Path
 from app.db.database import get_session
 from app.models.document import Document
 from app.schemas.document_schemas import DocumentOut 
-from app.services.document_services import upload_document
 from app.services.ai_service import process_document_ai
 from app.services.graph_service import calculate_2d_projection
-
+from app.services.document_services import upload_document, get_document_absolute_path
 router = APIRouter()
 
 @router.post("/upload")
