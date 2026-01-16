@@ -149,3 +149,31 @@ async def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
     
     return doc
+@router.delete("/{document_id}")
+async def delete_document(
+    document_id: UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Delete a document and its associated file.
+    """
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    doc = result.scalar_one_or_none()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    try:
+        file_path = get_document_absolute_path(doc.relative_path)
+        if file_path.exists():
+            file_path.unlink()
+            print(f"✅ Deleted file: {file_path}")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not delete file: {e}")
+    
+    await session.delete(doc)
+    await session.commit()
+    
+    return {"message": "Document deleted successfully", "id": document_id}

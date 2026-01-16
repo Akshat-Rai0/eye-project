@@ -18,7 +18,7 @@ def calculate_2d_projection(embeddings):
 
     reducer = UMAP(
         n_neighbors=n_neighbors, 
-        min_dist=0.1, 
+        min_dist=0.5, 
         n_components=2, 
         random_state=42
     )

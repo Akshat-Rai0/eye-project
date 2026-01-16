@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDocuments, searchDocuments, uploadDocument } from './api';
+import { getDocuments, searchDocuments, uploadDocument, deleteDocument } from './api';
 import Constellation from './components/Constellation';
 
 const API_BASE = 'http://localhost:8000';
@@ -39,6 +39,19 @@ function App() {
       setLoading(false);
     }
   }, [fetchDocuments]);
+
+  const handleDelete = async (docId) => {
+    if (!confirm('Are you sure you want to delete this image?')) return;
+    
+    try {
+      await deleteDocument(docId);
+      setSelectedDoc(null);
+      fetchDocuments();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete image');
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -150,6 +163,18 @@ function App() {
                   className="group relative bg-white/5 overflow-hidden border border-white/10 hover:border-white transition-all cursor-pointer grayscale hover:grayscale-0"
                   onClick={() => setSelectedDoc(doc)}
                 >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(doc.id);
+                    }}
+                    className="absolute top-2 right-2 z-10 p-2 bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                    title="Delete"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                   <div className="aspect-square overflow-hidden">
                     <img
                       src={getImageUrl(doc.relative_path)}
@@ -222,12 +247,21 @@ function App() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setSelectedDoc(null)}
-                className="mt-8 w-full py-4 bg-white text-black text-[10px] font-black uppercase tracking-[0.3em] hover:invert transition-all"
-              >
-                HIDE PREVIEW
-              </button>
+              <div className="flex gap-2 mt-8">
+                <button
+                  onClick={() => setSelectedDoc(null)}
+                  className="flex-1 py-4 bg-white text-black text-[10px] font-black uppercase tracking-[0.3em] hover:invert transition-all"
+                >
+                  HIDE PREVIEW
+                </button>
+                
+                <button
+                  onClick={() => handleDelete(selectedDoc.id)}
+                  className="px-6 py-4 bg-red-600 text-white text-[10px] font-black uppercase hover:bg-red-700 transition-all"
+                >
+                  DELETE
+                </button>
+              </div>
             </div>
           </div>
         </div>

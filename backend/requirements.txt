@@ -30,10 +30,3 @@ scikit-learn==1.4.0  # For additional ML utilities
 
 # --- Core Dependencies ---
 numpy==1.26.4
-
-# --- Optional/Unused (commented out for future use) ---
-# pgvector==0.3.6  # For vector similarity search (if needed later)
-# sentence-transformers==3.1.1  # For text embeddings (if needed later)
-# ollama==0.4.0  # For Ollama API (not currently used, Moondream loaded directly)
-# watchdog==5.0.3  # For file system monitoring (if needed later)
-# aiofiles==24.1.0  # For async file operations (if needed later)

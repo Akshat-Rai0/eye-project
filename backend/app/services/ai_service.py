@@ -12,7 +12,7 @@ from app.services.document_services import get_document_absolute_path
 
 # --- GLOBAL MODEL LOADING (Runs once on startup) ---
 print("Loading YOLOv11m...")
-yolo_model = YOLO('yolo11m.pt')
+yolo_model = YOLO('yolo11n.pt')
 
 print("Loading Moondream2 (Optimizing for M4 MPS)...")
 device = "mps" if torch.backends.mps.is_available() else "cpu"
