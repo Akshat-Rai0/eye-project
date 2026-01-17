@@ -13,6 +13,7 @@ from app.services.ai_service import process_document_ai
 from app.services.graph_service import calculate_2d_projection
 from app.services.document_services import upload_document, get_document_absolute_path
 router = APIRouter()
+# create an upload function
 
 @router.post("/upload")
 async def upload(
@@ -20,9 +21,7 @@ async def upload(
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
-    """
-    Upload an image, save to disk, and trigger background AI processing.
-    """
+# checking that whether the file that is being uploaded is an image 
     ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
     file_ext = Path(file.filename).suffix.lower()
     
@@ -40,6 +39,9 @@ async def upload(
     
     return {"id": doc.id, "message": "Upload successful. AI processing started."}
 
+
+
+# helps load the images in the frontend in grid format 
 @router.get("", response_model=List[DocumentOut])
 async def list_documents(
     limit: int = Query(100, description="Maximum number of documents to return"),
@@ -54,6 +56,11 @@ async def list_documents(
     )
     return result.scalars().all()
 
+
+
+
+
+# it performs a unified search on the entered tag   
 @router.get("/search", response_model=List[DocumentOut])
 async def search_documents(
     q: str = Query(..., description="The keyword to search for in tags or captions"),
@@ -66,14 +73,15 @@ async def search_documents(
     2. The full text caption
     3. The filename
     """
+# ensures that the result is case insensitive     
     search_term = q.lower()
+# makes a term that would be seached in the db 
     wildcard_term = f"%{search_term}%"
 
-    # We use 'or_' to match the term in ANY of these places
+    # We use 'or_' to match the term in ANY of these places either ai-generated tags , caption or FileName 
     statement = select(Document).where(
         or_(
             # Search inside the JSON tags array
-            # cast to String is a safe way to check JSON in SQLite/Postgres
             cast(Document.tags, String).ilike(wildcard_term),
             
             # Search in the long Moondream caption
@@ -86,6 +94,9 @@ async def search_documents(
 
     result = await session.execute(statement)
     return result.scalars().all()
+
+
+
 
 @router.get("/graph")
 async def get_image_graph(session: AsyncSession = Depends(get_session)):
@@ -118,12 +129,12 @@ async def get_image_graph(session: AsyncSession = Depends(get_session)):
             "tags": doc.tags
         })
 
-    # 4. Build Links (Connect images if they share 2+ tags)
+    # 4. Build Links (Connect images if they share 3+ tags)
     links = []
     for i in range(len(nodes)):
         for j in range(i + 1, len(nodes)):
             shared = set(nodes[i]["tags"]) & set(nodes[j]["tags"])
-            if len(shared) >= 2:
+            if len(shared) >= 3:
                 links.append({
                     "source": nodes[i]["id"], 
                     "target": nodes[j]["id"]
@@ -131,23 +142,30 @@ async def get_image_graph(session: AsyncSession = Depends(get_session)):
 
     return {"nodes": nodes, "links": links}
 
-@router.get("/{document_id}", response_model=DocumentOut)
-async def get_document(
-    document_id: UUID,
-    session: AsyncSession = Depends(get_session),
-):
-    """
-    Get a specific document by ID.
-    """
-    result = await session.execute(
-        select(Document).where(Document.id == document_id)
-    )
-    doc = result.scalar_one_or_none()
+
+
+
+# helper function 
+
+# @router.get("/{document_id}", response_model=DocumentOut)
+# async def get_document(
+#     document_id: UUID,
+#     session: AsyncSession = Depends(get_session),
+# ):
+#     """
+#     Get a specific document by ID.
+#     """
+#     result = await session.execute(
+#         select(Document).where(Document.id == document_id)
+#     )
+#     doc = result.scalar_one_or_none()
     
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+#     if not doc:
+#         raise HTTPException(status_code=404, detail="Document not found")
     
-    return doc
+#     return doc
+
+# added functionality to delete an image    
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: UUID,
