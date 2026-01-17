@@ -26,7 +26,7 @@ async def add_cors_header(request, call_next):
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
-# Register API routes
+# Register API routes from backend/app/api/routers/documents.py
 app.include_router(api_router)
 
 # Mount static files directory to serve images
