@@ -38,7 +38,7 @@ EYE utilizes a multi-layered AI pipeline to extract maximum information from eve
 
 | Model | Role | Version / Details |
 | :--- | :--- | :--- |
-| **YOLO11m** | **Object Detection** | The latest iteration of Ultralytics YOLO. Used for high-speed identification of 80+ standard objects with bounding box logic. |
+| **YOLO11n** | **Object Detection** | The latest iteration of Ultralytics YOLO. Used for high-speed identification of 80+ standard objects with bounding box logic. |
 | **Moondream2** | **Visual Reasoning** | A tiny yet powerful Vision Language Model (VLM). It generates the image captions and identifies complex context that fixed-class detectors miss. |
 | **CLIP (ViT-B-32)** | **Semantic Vectorization** | OpenAI's Contrastive Language-Image Pre-training. It converts images into 512-dimensional vectors (embeddings) where visual similarity equals mathematical proximity. |
 | **UMAP** | **Dimensionality Reduction** | Not a neural network, but a sophisticated manifold learning algorithm that projects 512D CLIP vectors into 2D/3D space for the Constellation view. |
