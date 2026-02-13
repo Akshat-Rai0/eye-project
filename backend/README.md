@@ -185,6 +185,6 @@ rm eye.db
 alembic upgrade head
 ```
 
-## License
 
-[Add your license here]
+
+
