@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDocuments, searchDocuments, uploadDocument, deleteDocument } from './api';
+import { getDocuments, searchDocuments, uploadDocument, deleteDocument, addTags } from './api';
 import Constellation from './components/Constellation';
 
 const API_BASE = 'http://localhost:8000';
@@ -11,6 +11,23 @@ function App() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
+  const [newTag, setNewTag] = useState('');
+
+  const handleAddTag = async (e) => {
+    e.preventDefault();
+    if (!newTag.trim() || !selectedDoc) return;
+
+    try {
+      const updatedDoc = await addTags(selectedDoc.id, [newTag.trim()]);
+      setSelectedDoc(updatedDoc);
+      // Update local documents list
+      setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? updatedDoc : d));
+      setNewTag('');
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      alert('Failed to add tag');
+    }
+  };
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -42,7 +59,7 @@ function App() {
 
   const handleDelete = async (docId) => {
     if (!confirm('Are you sure you want to delete this image?')) return;
-    
+
     try {
       await deleteDocument(docId);
       setSelectedDoc(null);
@@ -66,7 +83,7 @@ function App() {
       const pollTimer = setInterval(() => {
         if (!searchQuery) fetchDocuments();
         else handleSearch(searchQuery);
-      }, 3000);
+      }, 1000);
       return () => clearInterval(pollTimer);
     }
   }, [documents, searchQuery, fetchDocuments, handleSearch]);
@@ -163,12 +180,26 @@ function App() {
                   className="group relative bg-white/5 overflow-hidden border border-white/10 hover:border-white transition-all cursor-pointer grayscale hover:grayscale-0"
                   onClick={() => setSelectedDoc(doc)}
                 >
+                  {(!doc.tags || doc.tags.length === 0) && doc.processing_progress < 100 && (
+                    <>
+                      <div className="absolute top-0 left-0 w-full h-1 bg-white/20 z-20">
+                        <div
+                          className="h-full bg-green-500 transition-all duration-500"
+                          style={{ width: `${doc.processing_progress || 0}%` }}
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center flex-col gap-2 backdrop-blur-[2px]">
+                        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                        <span className="text-[10px] font-bold text-white tracking-widest">{doc.processing_progress || 0}%</span>
+                      </div>
+                    </>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(doc.id);
                     }}
-                    className="absolute top-2 right-2 z-10 p-2 bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                    className="absolute top-2 right-2 z-30 p-2 bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                     title="Delete"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -186,11 +217,17 @@ function App() {
                   <div className="p-4 bg-black/80 backdrop-blur-sm border-t border-white/5">
                     <p className="text-[10px] font-bold uppercase tracking-widest truncate">{doc.filename}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {doc.tags.slice(0, 2).map((tag, i) => (
-                        <span key={i} className="text-[9px] uppercase font-bold px-1.5 py-0.5 bg-white/10 text-white/60">
-                          {tag}
+                      {doc.tags && doc.tags.length > 0 ? (
+                        doc.tags.slice(0, 2).map((tag, i) => (
+                          <span key={i} className="text-[9px] uppercase font-bold px-1.5 py-0.5 bg-white/10 text-white/60">
+                            {tag}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 bg-white/5 text-white/30 animate-pulse">
+                          Processing...
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>
@@ -244,6 +281,22 @@ function App() {
                       </span>
                     ))}
                   </div>
+                  <form onSubmit={handleAddTag} className="mt-4 flex gap-2">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="+ ADD TAG"
+                      className="flex-1 bg-white/5 border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-white transition-all placeholder:text-white/20"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTag.trim()}
+                      className="bg-white text-black px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:invert disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ADD
+                    </button>
+                  </form>
                 </div>
               </div>
 
@@ -254,7 +307,7 @@ function App() {
                 >
                   HIDE PREVIEW
                 </button>
-                
+
                 <button
                   onClick={() => handleDelete(selectedDoc.id)}
                   className="px-6 py-4 bg-red-600 text-white text-[10px] font-black uppercase hover:bg-red-700 transition-all"

@@ -132,6 +132,27 @@ export default function Constellation() {
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.002}
         onNodeClick={node => setSelectedNode(node)}
+
+        // Physics Tweaks for better spacing
+        d3VelocityDecay={0.4}
+        d3AlphaDecay={0.01}
+        cooldownTicks={100}
+
+        // Custom Forces to reduce clustering
+        d3Force={(forceName, force) => {
+          if (forceName === 'charge') {
+            // Stronger repulsion to separate nodes
+            force.strength(-300).distanceMax(500);
+          }
+          if (forceName === 'link') {
+            // Longer links for better spacing, especially from origin
+            force.distance(link => link.isOriginLink ? 150 : 50);
+          }
+          if (forceName === 'center') {
+            // Gentle center force
+            force.strength(0.05);
+          }
+        }}
       />
     </div>
   );

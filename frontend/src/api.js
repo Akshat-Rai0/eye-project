@@ -38,5 +38,10 @@ export const deleteDocument = async (id) => {
   return response.data;
 };
 
+export const addTags = async (id, tags) => {
+  const response = await api.patch(`/documents/${id}/tags`, { tags });
+  return response.data;
+};
+
 
 export default api;
