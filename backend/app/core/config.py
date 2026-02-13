@@ -3,12 +3,14 @@ from pydantic_settings import BaseSettings
 from pathlib import Path
 # this function takes the db url from env file and connects db to the project
 class Settings(BaseSettings):
-    DATABASE_URL: str
+    DATABASE_URL: str = "sqlite+aiosqlite:///./eye.db"
     # Changed from "data/images" to "data" to match your service logic
     DATA_BASE_DIR: str = "data" 
 
     class Config:
-        env_file = ".env"
+        # env_file = ".env" 
+        # Commented out .env loading to avoid PermissionError in some environments
+        pass
 
 settings = Settings()
 

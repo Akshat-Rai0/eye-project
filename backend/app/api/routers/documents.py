@@ -8,12 +8,48 @@ from pathlib import Path
 # Import your models and schemas
 from app.db.database import get_session
 from app.models.document import Document
-from app.schemas.document_schemas import DocumentOut 
-from app.services.ai_service import process_document_ai
+from app.schemas.document_schemas import DocumentOut, DocumentUpdate
+
+from app.services.ai_service import process_document_ai_async
 from app.services.graph_service import calculate_2d_projection
 from app.services.document_services import upload_document, get_document_absolute_path
+
 router = APIRouter()
-# create an upload function
+
+# Add custom tag endpoint
+@router.patch("/{document_id}/tags", response_model=DocumentOut)
+async def update_tags(
+    document_id: UUID,
+    update_data: DocumentUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Append new tags to a document.
+    """
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    doc = result.scalar_one_or_none()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if update_data.tags:
+        # Check if tags is None, if so init as empty list
+        current_tags = list(doc.tags) if doc.tags else []
+        # Append only new tags (avoid duplicates)
+        for tag in update_data.tags:
+            if tag not in current_tags:
+                current_tags.append(tag)
+        
+        # Re-assign to trigger SQLAlchemy change tracking for JSON types
+        doc.tags = current_tags
+        
+    await session.commit()
+    await session.refresh(doc)
+    return doc
+
+
 
 @router.post("/upload")
 async def upload(
@@ -35,7 +71,7 @@ async def upload(
     doc = await upload_document(file, session)
     
     # 2. Trigger AI processing (YOLO + Moondream) in the background
-    background_tasks.add_task(process_document_ai, doc.id)
+    background_tasks.add_task(process_document_ai_async, doc.id)
     
     return {"id": doc.id, "message": "Upload successful. AI processing started."}
 
