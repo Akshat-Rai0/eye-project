@@ -4,8 +4,8 @@ from sqlalchemy import select, or_, cast, String
 from typing import List, Optional
 from uuid import UUID
 from pathlib import Path
+from app.core.config import settings
 
-# Import your models and schemas
 from app.db.database import get_session
 from app.models.document import Document
 from app.schemas.document_schemas import DocumentOut, DocumentUpdate
@@ -16,7 +16,7 @@ from app.services.document_services import upload_document, get_document_absolut
 
 router = APIRouter()
 
-# Add custom tag endpoint
+
 @router.patch("/{document_id}/tags", response_model=DocumentOut)
 async def update_tags(
     document_id: UUID,
@@ -30,25 +30,20 @@ async def update_tags(
         select(Document).where(Document.id == document_id)
     )
     doc = result.scalar_one_or_none()
-    
+
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     if update_data.tags:
-        # Check if tags is None, if so init as empty list
         current_tags = list(doc.tags) if doc.tags else []
-        # Append only new tags (avoid duplicates)
         for tag in update_data.tags:
             if tag not in current_tags:
                 current_tags.append(tag)
-        
-        # Re-assign to trigger SQLAlchemy change tracking for JSON types
         doc.tags = current_tags
-        
+
     await session.commit()
     await session.refresh(doc)
     return doc
-
 
 
 @router.post("/upload")
@@ -57,27 +52,27 @@ async def upload(
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
-# checking that whether the file that is being uploaded is an image 
+    if settings.DEMO_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Upload disabled in demo mode — this is a read-only showcase."
+        )
+
     ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
     file_ext = Path(file.filename).suffix.lower()
-    
+
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
-    
-    # 1. Save file and create DB record
+
     doc = await upload_document(file, session)
-    
-    # 2. Trigger AI processing (YOLO + Moondream) in the background
     background_tasks.add_task(process_document_ai_async, doc.id)
-    
+
     return {"id": doc.id, "message": "Upload successful. AI processing started."}
 
 
-
-# helps load the images in the frontend in grid format 
 @router.get("", response_model=List[DocumentOut])
 async def list_documents(
     limit: int = Query(100, description="Maximum number of documents to return"),
@@ -93,10 +88,6 @@ async def list_documents(
     return result.scalars().all()
 
 
-
-
-
-# it performs a unified search on the entered tag   
 @router.get("/search", response_model=List[DocumentOut])
 async def search_documents(
     q: str = Query(..., description="The keyword to search for in tags or captions"),
@@ -109,21 +100,13 @@ async def search_documents(
     2. The full text caption
     3. The filename
     """
-# ensures that the result is case insensitive     
     search_term = q.lower()
-# makes a term that would be seached in the db 
     wildcard_term = f"%{search_term}%"
 
-    # We use 'or_' to match the term in ANY of these places either ai-generated tags , caption or FileName 
     statement = select(Document).where(
         or_(
-            # Search inside the JSON tags array
             cast(Document.tags, String).ilike(wildcard_term),
-            
-            # Search in the long Moondream caption
             Document.caption.ilike(wildcard_term),
-            
-            # Search in the original filename
             Document.filename.ilike(wildcard_term)
         )
     ).limit(limit)
@@ -132,76 +115,47 @@ async def search_documents(
     return result.scalars().all()
 
 
-
-
 @router.get("/graph")
 async def get_image_graph(session: AsyncSession = Depends(get_session)):
     """
     Generate a force-directed graph of images based on their embeddings.
     Returns nodes (images) and links (connections between similar images).
     """
-    # 1. Fetch all documents with embeddings
     result = await session.execute(
         select(Document).where(Document.embedding != None)
     )
     docs = result.scalars().all()
-    
+
     if not docs:
         return {"nodes": [], "links": []}
 
-    # 2. Project embeddings to 2D coordinates
     embeddings = [d.embedding for d in docs]
     coords = calculate_2d_projection(embeddings)
 
-    # 3. Build Nodes
     nodes = []
     for i, doc in enumerate(docs):
         nodes.append({
             "id": str(doc.id),
             "x": coords[i][0],
             "y": coords[i][1],
-            "img": f"http://localhost:8000/data/{doc.relative_path}",
+            "img": f"{settings.PUBLIC_BASE_URL}/data/{doc.relative_path}",
             "caption": doc.caption,
             "tags": doc.tags
         })
 
-    # 4. Build Links (Connect images if they share 3+ tags)
     links = []
     for i in range(len(nodes)):
         for j in range(i + 1, len(nodes)):
             shared = set(nodes[i]["tags"]) & set(nodes[j]["tags"])
             if len(shared) >= 3:
                 links.append({
-                    "source": nodes[i]["id"], 
+                    "source": nodes[i]["id"],
                     "target": nodes[j]["id"]
                 })
 
     return {"nodes": nodes, "links": links}
 
 
-
-
-# helper function 
-
-# @router.get("/{document_id}", response_model=DocumentOut)
-# async def get_document(
-#     document_id: UUID,
-#     session: AsyncSession = Depends(get_session),
-# ):
-#     """
-#     Get a specific document by ID.
-#     """
-#     result = await session.execute(
-#         select(Document).where(Document.id == document_id)
-#     )
-#     doc = result.scalar_one_or_none()
-    
-#     if not doc:
-#         raise HTTPException(status_code=404, detail="Document not found")
-    
-#     return doc
-
-# added functionality to delete an image    
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: UUID,
@@ -214,10 +168,10 @@ async def delete_document(
         select(Document).where(Document.id == document_id)
     )
     doc = result.scalar_one_or_none()
-    
+
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     try:
         file_path = get_document_absolute_path(doc.relative_path)
         if file_path.exists():
@@ -225,8 +179,8 @@ async def delete_document(
             print(f"✅ Deleted file: {file_path}")
     except Exception as e:
         print(f"⚠️  Warning: Could not delete file: {e}")
-    
+
     await session.delete(doc)
     await session.commit()
-    
+
     return {"message": "Document deleted successfully", "id": document_id}

@@ -3,9 +3,15 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from app.core.config import settings
 
+# --- RESOLVE ACTIVE DATABASE URL (accounts for demo mode) ---
+if settings.DEMO_MODE:
+    ACTIVE_DATABASE_URL = "sqlite+aiosqlite:///./demo_seed.db"
+else:
+    ACTIVE_DATABASE_URL = settings.DATABASE_URL
+
 # --- ASYNC SETUP (For FastAPI Endpoints) ---
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    ACTIVE_DATABASE_URL,
     echo=True,
     pool_pre_ping=True,
 )
@@ -22,21 +28,18 @@ async def get_session():
 # --- SYNC SETUP (For AI Background Worker) ---
 def get_sync_database_url() -> str:
     """Convert async database URL to sync URL for background threads."""
-    url = settings.DATABASE_URL
-    
-    # Remove PostgreSQL async drivers
+    url = ACTIVE_DATABASE_URL
+
     url = url.replace("+asyncpg", "").replace("+psycopg", "")
-    
-    # Remove SQLite async driver (Critical for avoiding MissingGreenlet error)
+
     if "+aiosqlite" in url:
         url = url.replace("+aiosqlite", "")
-        
+
     return url
 
 sync_engine = create_engine(
     get_sync_database_url(),
-    # Crucial for multi-threaded SQLite access
-    connect_args={"timeout": 30, "check_same_thread": False}, 
+    connect_args={"timeout": 30, "check_same_thread": False},
     pool_pre_ping=True,
 )
 

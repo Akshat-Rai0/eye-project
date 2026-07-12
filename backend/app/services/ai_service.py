@@ -5,15 +5,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from uuid import UUID
 from PIL import Image
-from ultralytics import YOLO
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import open_clip
 
 from app.db.database import SessionLocal
 from app.models.document import Document
 from app.services.document_services import get_document_absolute_path
 
-# Add thread pool for CPU-bound tasks
+from app.core.config import settings
+
 executor = ThreadPoolExecutor(max_workers=3)
 
 # --- GLOBAL MODEL LOADING (Runs once on startup) ---
@@ -227,3 +225,48 @@ def extract_ai_keywords(enc_image) -> list[str]:
     # Clean the response: lowercase, remove periods, split by comma
     raw_tags = answer.lower().replace(".", "").split(",")
     return [t.strip() for t in raw_tags if t.strip()]
+
+
+executor = ThreadPoolExecutor(max_workers=3)
+
+
+# --- GLOBAL MODEL LOADING (Runs once on startup) ---
+if not settings.DEMO_MODE:
+    from ultralytics import YOLO
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    import open_clip
+
+    print("Loading YOLOv11m...")
+    yolo_model = YOLO('yolo11n.pt')
+
+    print("Loading Moondream2 (Optimizing for M4 MPS)...")
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+
+    moondream_model = AutoModelForCausalLM.from_pretrained(
+        "vikhyatk/moondream2",
+        revision="2025-01-09",
+        trust_remote_code=True,
+        device_map={"": device},
+        torch_dtype=torch.float16
+    ).to(device)
+    moondream_model.eval()
+
+    moondream_tokenizer = AutoTokenizer.from_pretrained(
+        "vikhyatk/moondream2",
+        trust_remote_code=True
+    )
+
+    print("Loading CLIP for embeddings...")
+    clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
+        'ViT-B-32', pretrained='openai'
+    )
+    clip_model = clip_model.to(device)
+    clip_model.eval()
+else:
+    print("DEMO_MODE active — skipping AI model loads.")
+    yolo_model = None
+    moondream_model = None
+    moondream_tokenizer = None
+    clip_model = None
+    clip_preprocess = None
+    device = "cpu"

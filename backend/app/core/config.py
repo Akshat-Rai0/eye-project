@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./eye.db"
     # Changed from "data/images" to "data" to match your service logic
     DATA_BASE_DIR: str = "data" 
+    DEMO_MODE: bool = False
+    PUBLIC_BASE_URL: str = "http://localhost:8000"
+
 
     class Config:
         # env_file = ".env" 
