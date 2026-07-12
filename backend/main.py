@@ -13,8 +13,9 @@ app = FastAPI(title="EYE")
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://eye-project-nine.vercel.app",
+    "https://eye-project-git-main-akshatrai.vercel.app",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
