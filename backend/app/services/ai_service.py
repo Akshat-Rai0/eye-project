@@ -1,4 +1,4 @@
-import torch
+
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -235,6 +235,7 @@ if not settings.DEMO_MODE:
     from ultralytics import YOLO
     from transformers import AutoModelForCausalLM, AutoTokenizer
     import open_clip
+    import torch
 
     print("Loading YOLOv11m...")
     yolo_model = YOLO('yolo11n.pt')
