@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getDocuments, searchDocuments, uploadDocument, deleteDocument, addTags } from './api';
 import Constellation from './components/Constellation';
 
-const API_BASE = 'http://localhost:8000';
+baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
 
 function App() {
   const [documents, setDocuments] = useState([]);
