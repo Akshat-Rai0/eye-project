@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # Changed from "data/images" to "data" to match your service logic
     DATA_BASE_DIR: str = "data"
     DEMO_MODE: bool = True
-    PUBLIC_BASE_URL: str = "http://localhost:8000"
+    PUBLIC_BASE_URL: str = ""
 
 
     class Config:

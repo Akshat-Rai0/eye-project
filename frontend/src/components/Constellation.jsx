@@ -2,7 +2,7 @@ import ForceGraph3D from 'react-force-graph-3d';
 import { useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function Constellation() {
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });

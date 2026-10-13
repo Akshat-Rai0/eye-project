@@ -138,7 +138,7 @@ async def get_image_graph(session: AsyncSession = Depends(get_session)):
             "id": str(doc.id),
             "x": coords[i][0],
             "y": coords[i][1],
-            "img": f"{settings.PUBLIC_BASE_URL}/data/{doc.relative_path}",
+            "img": f"/data/{doc.relative_path}",
             "caption": doc.caption,
             "tags": doc.tags
         })
