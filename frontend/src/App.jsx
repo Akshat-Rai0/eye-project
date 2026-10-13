@@ -149,10 +149,13 @@ function App() {
               </button>
             </div>
 
-            <label className="cursor-pointer group">
-              <input type="file" className="hidden" onChange={onFileChange} accept="image/*" />
-              <div className="flex items-center gap-2 bg-white text-black px-5 py-2.5 font-bold uppercase text-xs transition-all active:scale-95 hover:invert">
-                {isUploading ? '...' : 'Upload'}
+            <label className="cursor-not-allowed group">
+              <input type="file" className="hidden" disabled accept="image/*" />
+              <div
+                className="flex items-center gap-2 bg-white/30 text-white/50 px-5 py-2.5 font-bold uppercase text-xs cursor-not-allowed"
+                title="Uploads are temporarily disabled"
+              >
+                Upload
               </div>
             </label>
           </div>
@@ -319,6 +322,13 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Demo Mode Warning Banner */}
+      <div className="fixed bottom-4 left-4 z-50 bg-yellow-500/10 border border-yellow-500/30 backdrop-blur-sm px-4 py-2 rounded-sm">
+        <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">
+          ⚠ New image processing is temporarily disabled
+        </p>
+      </div>
     </div>
   );
 }
