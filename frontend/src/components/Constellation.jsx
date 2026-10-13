@@ -51,6 +51,13 @@ export default function Constellation() {
         Nodes: {graphData.nodes.length - 1}
       </div>
 
+      <div className="absolute bottom-4 left-4 z-10 max-w-xs bg-white/5 border border-white/10 backdrop-blur-sm px-4 py-3 rounded-sm">
+        <h4 className="text-white text-[10px] font-black uppercase tracking-widest mb-2">How It Works</h4>
+        <p className="text-white/60 text-[9px] leading-relaxed">
+          Images are positioned based on semantic similarity using AI embeddings. Connections appear between images that share 3 or more common tags.
+        </p>
+      </div>
+
       {selectedNode && !selectedNode.isCenter && (
         <div className="absolute top-6 right-6 z-20 w-80 bg-black border border-white/20 animate-in fade-in duration-300">
           <button onClick={() => setSelectedNode(null)} className="absolute top-2 right-2 z-10 text-white/40 hover:text-white p-2">✕</button>
